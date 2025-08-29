@@ -37,7 +37,7 @@ helm install kyverno-authz-server \
   --set certificates.certManager.issuerRef.name=selfsigned-issuer
 ```
 
-## Manifest install
+## Agentgateway install
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/lucchmielowski/agentgateway-kyverno-demo/refs/heads/main/manifests/agentgateway.yaml

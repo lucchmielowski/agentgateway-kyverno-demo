@@ -30,7 +30,7 @@ spec:
             - -f
             - /etc/config/config.yaml
           ports:
-            - containerPort: 3000 # Bind port
+            - containerPort: 8080 # Bind port
               name: bind
             - containerPort: 15000 # Admin port
               name: admin
@@ -50,7 +50,7 @@ metadata:
 data:
   config.yaml: |-
     binds:
-      - port: 3000
+      - port: 8080
         listeners:
           - routes:
               - backends:
@@ -86,17 +86,15 @@ metadata:
     app: agentgateway
   namespace: agentgateway-system
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
-    - port: 3000
+    - port: 8080
       name: bind
       targetPort: bind
       protocol: TCP
-      nodePort: 30080
     - port: 15000
       targetPort: admin
       protocol: TCP
       name: name
-      nodePort: 30081
   selector:
     app: agentgateway
