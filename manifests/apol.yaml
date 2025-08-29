@@ -1,0 +1,35 @@
+apiVersion: envoy.kyverno.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: test-authorization
+  namespace: kyverno
+spec:
+  failurePolicy: Fail
+  variables:
+    - name: authorization
+      expression: object.attributes.request.http.headers[?"authorization"].orValue("").split(" ")
+    - name: token
+      expression: >
+        size(variables.authorization) == 2 && variables.authorization[0].lowerAscii() == "bearer"
+          ? jwt.Decode(variables.authorization[1], "secret")
+          : null
+  deny:
+    # request not authenticated -> 401
+    - match: >
+        variables.token == null || !variables.token.Valid
+      response: >
+        envoy.Denied(401).Response()
+      # request authenticated but not admin role -> 403
+    - match: >
+        variables.token.Claims.?role.orValue("") != "admin"
+      response: >
+        envoy.Denied(403).Response()
+  allow:
+    # request authenticated and admin role -> 200
+    - response: >
+        envoy
+          .Allowed()
+          .WithHeader("x-validated-by", "my-security-checkpoint")
+          .WithoutHeader("x-force-authorized")
+          .WithResponseHeader("x-add-custom-response-header", "added")
+          .Response()
