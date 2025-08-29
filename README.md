@@ -40,7 +40,7 @@ helm install kyverno-authz-server \
 ## Manifest install
 
 ```sh
-kubectl apply -f manifests/agentgateway.yaml
+kubectl apply -f https://raw.githubusercontent.com/lucchmielowski/agentgateway-kyverno-demo/refs/heads/main/manifests/agentgateway.yaml
 ```
 
 ## Testing
