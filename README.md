@@ -1,7 +1,147 @@
-# KGateway (agentgateway) + Kyverno demo
+# Agentgateway + Kyverno integration
 
-## Pre-setup
+This repository serves as POC for showcasing Kgateway + Agentgateway + Kyverno integration
 
+## Install KGateway
+
+```shell
+# install gateway API CDRDs
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml
+
+# install kgateway CDRDs
+helm upgrade -i -create-namespace --namespace kgateway-system --version v2.1.0-main kgateway-crds oci://cr.kgateway.dev/kgateway-dev/charts/kgateway-crds
+```
+
+```sh
+# install kgateway
+helm upgrade -i --namespace kgateway-system --version v2.1.0-main kgateway oci://cr.kgateway.dev/kgateway-dev/charts/kgateway \
+  --set agentGateway.enabled=true \
+  --set agentGateway.enableAlphaAPIs=true
+```
+
+###  Create MCP server
+
+```sh
+kubectl apply -f manifests/mcp-server.yaml
+```
+
+```sh
+# Create backend to MCP server
+kubectl apply -f- <<EOF
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  name: mcp-backend
+spec:
+  type: MCP
+  mcp:
+    targets:
+    - name: website
+      static:
+        host: mcp-website-fetcher.default.svc.cluster.local
+        port: 80
+        protocol: SSE   
+EOF
+```
+
+### Create the gateway 
+```sh
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: agentgateway
+  namespace: kgateway-system
+spec:
+  gatewayClassName: agentgateway
+  listeners:
+  - protocol: HTTP
+    port: 8080
+    name: http
+    allowedRoutes:
+      namespaces:
+        from: All
+EOF
+```
+
+
+```sh
+# Create HTTP Route to ref backend
+kubectl apply -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp
+spec:
+  parentRefs:
+  - name: agentgateway
+  rules:
+    - backendRefs:
+      - name: mcp-backend
+        group: gateway.kgateway.dev
+        kind: Backend   
+EOF
+```
+
+
+## SKIP Gateway Extension + TrafficPolicy, does not work for agentgateway
+```sh
+## Create gateway-extension
+kubectl apply -f - <<EOF
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: GatewayExtension
+metadata:
+  namespace: kgateway-system
+  name: kyverno-authz-server
+spec:
+  type: ExtAuth
+  extAuth:
+    grpcService:
+      backendRef:
+        name: kyverno-authz-server
+        namespace: kyverno
+        port: 9081
+EOF
+```
+```sh
+# Add traffic policy to route traffic through extension
+kubectl apply -f - <<EOF
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  namespace: kgateway-system
+  name: kyverno-authz-server
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: agentgateway
+  extAuth:
+    extensionRef: 
+      name: kyverno-authz-server
+EOF
+```
+
+```sh
+# Grant authorization to kyverno authz-server
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: kgateway-gateway
+  namespace: kyverno
+spec:
+  from:
+    - group: gateway.kgateway.dev
+      kind: GatewayExtension
+      namespace: kgateway-system
+  to:
+    - group: ""
+      kind: Service
+EOF
+```
+
+## Install kyverno authz-server
 
 ```shell
 kind create cluster --image kindest/node:v1.31.4 --wait 1m
@@ -37,22 +177,7 @@ helm install kyverno-authz-server \
   --set certificates.certManager.issuerRef.name=selfsigned-issuer
 ```
 
-## Agentgateway install
-
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/lucchmielowski/agentgateway-kyverno-demo/refs/heads/main/manifests/agentgateway.yaml
-```
-
-## Testing
-
-```sh
-# ADD vpol
-k apply -f manifests/vpol.yaml
-```
-
-
-```sh
-kubectl port-forward deployment/agentgateway 8080:8080
-
-npx github:modelcontextprotocol/inspector
+# Create a ValidationPolicy
+kubectl apply -f manifests/vpol.yaml
 ```

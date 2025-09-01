@@ -1,3 +1,18 @@
+# apiVersion: envoy.kyverno.io/v1alpha1
+# kind: ValidatingPolicy
+# metadata:
+#   name: policy-global-allow
+# spec:
+#   evaluation:
+#     mode: Envoy
+#   matchConditions:
+#   - name: request-body-contains-echo
+#     expression: >
+#       object.attributes.request.http.body.indexOf("echo") != -1
+#   validations:
+#   - expression:
+#       envoy.Allowed().Response()
+# ---
 apiVersion: envoy.kyverno.io/v1alpha1
 kind: ValidatingPolicy
 metadata:
@@ -7,5 +22,5 @@ spec:
     mode: Envoy
   validations:
   - expression:
-      # envoy.Allowed().Response()
-      envoy.Denied(403).Response()
+      envoy.Allowed().Response()
+      #envoy.Denied(403).Response()
