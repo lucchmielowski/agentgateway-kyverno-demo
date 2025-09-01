@@ -181,3 +181,18 @@ helm install kyverno-authz-server \
 # Create a ValidationPolicy
 kubectl apply -f manifests/vpol.yaml
 ```
+
+## Testing if it works
+
+```sh
+# Port-forward to agent-gateway
+kubectl port-forward -n kgateway-system deployment/agentgateway 8080:8080
+
+# (In another termnial) Launch mcp-inspector
+npx modelcontextprotocol/inspector#0.16.2
+```
+
+From the Inspector's UX, you should be able to do everything. Update the validation rule in the `manifests/vpol.yaml` file so that the rule is now `envoy.Denied(403).Response()`. 
+You should now get 403 errors for all actions (even login).
+
+## TODO: Add more complex example(s)
