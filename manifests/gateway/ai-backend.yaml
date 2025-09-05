@@ -1,0 +1,18 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  labels:
+    app: agentgateway-kyverno
+  name: openai
+  namespace: kgateway-system
+spec:
+  type: AI
+  ai:
+    llm:
+      provider:
+        openai:
+          authToken:
+            kind: SecretRef
+            secretRef:
+              name: openai-secret
+          model: "gpt-3.5-turbo"

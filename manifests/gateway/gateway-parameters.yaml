@@ -1,0 +1,20 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: GatewayParameters
+metadata:
+  name: agentgateway
+  namespace: kgateway-system
+  labels:
+    app: agentgateway-kyverno
+spec:
+  kube:
+    aiExtension:
+      enabled: true
+      ports:
+      - name: ai-monitoring
+        containerPort: 9092
+      image:
+        registry: cr.kgateway.dev/kgateway-dev
+        repository: kgateway-ai-extension
+        tag: v2.1.0-main
+    service:
+      type: NodePort
